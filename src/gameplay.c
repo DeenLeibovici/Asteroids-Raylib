@@ -16,7 +16,7 @@ void gamePlay(void){
         speed = 0.0;
         init = false;
         for (int i = 0; i < 100; i++) {
-            particles[i] = (Particle*)malloc(sizeof(Particle));
+            particles[i] = malloc(sizeof(Particle));
             //memset(particles[i],0,sizeof(Particle));
             particles[i]->velocity = 0.0;
             particles[i]->color = WHITE;
@@ -49,12 +49,13 @@ void update(void){
     }
 
     //Update Speed
-    if (IsKeyDown(KEY_UP) && speed < 0.1){
-        speed += 0.01;
+    if (IsKeyDown(KEY_UP)){
+        if (speed < 0.1)
+            speed += 0.01;
         //activate particles
         for (int i = 0; i < 100; i++){
             particles[i]->lifetime+=0.1;
-            particles[i]->velocity += 0.02;
+            particles[i]->velocity += 0.01;
         }
 
     }
@@ -66,6 +67,7 @@ void update(void){
         particles[i]->position.x += particles[i]->velocity*((180/PI)*cosf((PI/180.0)*rotation));
         particles[i]->position.y += particles[i]->velocity*((180/PI)*sinf((PI/180.0)*rotation));
     }
+    //printf("%f\n", particles[0]->velocity);
 
     if (spaceShip->x > 1280)
         spaceShip->x = 0;
@@ -87,7 +89,7 @@ void update(void){
             
         }
         if (particles[i]->velocity > 0){
-            particles[i]->velocity-= 0.01;
+            particles[i]->velocity-= 0.001;
         }
     }
 }
