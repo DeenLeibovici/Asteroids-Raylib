@@ -1,6 +1,5 @@
 #include "titlescreen.h"
 
-
 void titleScreen(Scene* scene){
     const char* titleText = "Asteroids";
     const char* playText = "Press Enter Key";

@@ -3,6 +3,13 @@
 #include "gameplay.h"
 #include <stdlib.h>
 
+
+#if defined(PLATFORM_DESKTOP)
+    #define GLSL_VERSION            330
+#else   // PLATFORM_ANDROID, PLATFORM_WEB
+    #define GLSL_VERSION            100
+#endif
+
 // void titleScreen();
 // #include "resource_dir.h"	// utility header for SearchAndSetResourceDir
 

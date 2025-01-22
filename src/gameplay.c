@@ -10,8 +10,19 @@ Particle* particles[numParticles];
 unsigned int gameFrame = 0;
 int nextParticleIndex = 0;
 
+#if defined(PLATFORM_DESKTOP)
+    #define GLSL_VERSION            330
+#else   // PLATFORM_ANDROID, PLATFORM_WEB
+    #define GLSL_VERSION            100
+#endif
+
+Shader shader;
 void gamePlay(void){
     if (init){
+        shader = LoadShader(0, TextFormat("src/bg.fs", GLSL_VERSION));
+        SetShaderValue(shader, GetShaderLocation(shader, "resolution"),
+                   (float[2]){ 1280, 800}, SHADER_UNIFORM_VEC2);
+
         srand((unsigned int)time(NULL));
         spaceShip = (Vector2*)malloc(sizeof(Vector2));
         spaceShip->x = 400.0;
@@ -23,7 +34,6 @@ void gamePlay(void){
             particles[i] = (Particle*)malloc(sizeof(Particle));
             //memset(particles[i],0,sizeof(Particle));
             particles[i]->velocity = (Vector2){0,0};
-            particles[i]->color = RED;
             particles[i]->lifetime = 0.0;
             particles[i]->position.x = 10;
             particles[i]->position.y = 10;
@@ -31,14 +41,25 @@ void gamePlay(void){
         }
     }
     else{
+        float time = (float)gameFrame*0.001;
+        SetShaderValue(shader, GetShaderLocation(shader, "time"), &time, SHADER_UNIFORM_FLOAT);
         BeginDrawing();
         ClearBackground(BLACK);
+
+        BeginShaderMode(shader);
+        DrawRectangle(0, 0, 1280, 800, BLACK); // Full-screen shader effect
+        EndShaderMode();
+
         DrawPolyLinesEx(*spaceShip, 3, 40.0, rotation, 5.0, WHITE);
 
         for (int i = 0; i < numParticles; i++) {
             if (particles[i]->alive)
-                DrawCircleV(particles[i]->position,5.0, RED);
+            {
+                Color color = {i % 255,(2*i) % 255,(3*i) % 255,255};
+                DrawCircleV(particles[i]->position,5.0, color);
+            }
         }
+        //printf("%d,%d,%d\n",particles[0]->color.r,particles[0]->color.g,particles[0]->color.b);
         EndDrawing();
         update();
         particleHandler();
@@ -57,8 +78,8 @@ void update(void){
     }
 
     //Update Speed
-    if (IsKeyDown(KEY_UP) && speed < 0.1){
-        speed += 0.005;
+    if (IsKeyDown(KEY_UP) && speed < 0.15){
+        speed += 0.05;
     }
 
     spaceShip->x += speed*((180/PI)*cosf((PI/180.0)*rotation));
@@ -89,21 +110,21 @@ void particleHandler(void)
     //printf("Speed: %.2f\n", speed);
     if (IsKeyDown(KEY_UP) /*&& speed < 0.09*/ && (gameFrame%1==0))
     {
-        for (int i = 0; i < 10; i++){
+        for (int i = 0; i < 5; i++){
             float max_deviation = 30.0f * (PI / 180.0f); // 10 degrees in radians
             float random_deviation = (rand() / (float)RAND_MAX) * 2 * max_deviation - max_deviation;
 
             float fraction = 20.0;
             float angle_rad = (PI / 180.0f) * rotation + random_deviation;
-            printf("anglerad: %.2f\n", angle_rad);
+            //printf("anglerad: %.2f\n", angle_rad);
 
             Particle *p = particles[nextParticleIndex];
             p->alive = true;
             p->velocity.x = -fraction * speed * cosf(angle_rad);
             p->velocity.y = -fraction * speed * sinf(angle_rad);
-            printf("Particle Velocity: x = %.2f, y = %.2f\n", -fraction * speed * cosf((PI / 180.0f) * rotation), -fraction * speed * sinf((PI / 180.0f) * rotation));
+            //printf("Particle Velocity: x = %.2f, y = %.2f\n", -fraction * speed * cosf((PI / 180.0f) * rotation), -fraction * speed * sinf((PI / 180.0f) * rotation));
 
-            p->color = WHITE;
+            //p->color = WHITE;
             p->lifetime = 100;
             p->position = *spaceShip;
 

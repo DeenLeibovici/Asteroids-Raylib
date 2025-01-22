@@ -9,7 +9,7 @@ typedef struct Particle {
     Vector2 velocity;
     int lifetime;    // Time before the particle disappears
     // float size;        // Size of the particle
-    Color color;       // Particle color
+    //Color color;       // Particle color
     bool alive;
 } Particle;
 
