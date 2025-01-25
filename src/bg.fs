@@ -1,73 +1,22 @@
 #version 330
 
-// uniform float time; // Pass time from the game
-// uniform vec2 resolution; // Screen resolution
-
-// void main() {
-//     vec2 uv = gl_FragCoord.xy / resolution; // Normalize coordinates
-//     float gradient =0.5 + 0.5 * cos(uv.y * 10.0 + time); // Add a wave effect
-//     gl_FragColor = vec4(uv.x, gradient, uv.y, 1.0); // Cool color transition
-// }
-
-// Vertex Shader
-
-// layout (location = 0) in vec2 aPos;
-// void main()
-// {
-//     gl_Position = vec4(aPos, 0.0, 1.0);
-// }
-
-// Fragment Shader
-// #version 330 core
-out vec4 FragColor;
-uniform float time;
-uniform vec2 resolution;
-
-// Random number generator based on coordinates
-float random(vec2 st) {
-    return fract(sin(dot(st.xy, vec2(12.9898, 78.233))) * 43758.5453123);
+in vec4 gl_FragCoord ;
+out vec4 fragColor;
+uniform float iTime;
+uniform float iMousex;
+uniform float iMousey;
+// uniform vec2 resolution;
+void main(){
+float speed = .041;
+float scale = 0.002;
+vec4 p = gl_FragCoord * scale;   
+for(int i=1; i<10; i++){
+    p.x+=0.5/float(i)*sin(float(i)*3.*p.y+iTime*speed)+iMousex/1000.;
+    p.y+=0.3/float(i)*cos(float(i)*3.*p.x+iTime*speed)+iMousey/1000.;
 }
-
-// Smooth noise function
-float noise(vec2 st) {
-    vec2 i = floor(st);
-    vec2 f = fract(st);
-    
-    float a = random(i);
-    float b = random(i + vec2(1.0, 0.0));
-    float c = random(i + vec2(0.0, 1.0));
-    float d = random(i + vec2(1.0, 1.0));
-
-    vec2 u = f * f * (3.0 - 2.0 * f);
-
-    return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
+float r=cos(p.x+p.y+1.)*.5+.5;
+float g=sin(p.x+p.y+1.)*.5+.5;
+float b=(sin(p.x+p.y)+cos(p.x+p.y))*.85+.5;
+vec3 color = vec3(r,g,b);
+fragColor = vec4(color,1.0);
 }
-
-void main() {
-    vec2 uv = gl_FragCoord.xy / resolution;
-    
-    // Nebula background (smooth gradient)
-    vec3 color = vec3(0.0);
-    vec2 pos = uv * 10.0;
-    float n = noise(pos);
-    color += vec3(0.1, 0.2, 0.5) * n; // Blue nebula base
-    color += vec3(0.8, 0.2, 0.6) * (1.0 - n); // Magenta highlights
-
-    // Stars
-    for (int i = 0; i < 10; i++) {
-        vec2 starPos = vec2(random(vec2(float(i), time)), random(vec2(float(i) + 1.0, time + 1.0)));
-        starPos *= vec2(1.0, resolution.y / resolution.x); // Adjust for aspect ratio
-        float starSize = 0.002 + 0.003 * random(vec2(float(i) + 2.0, time));
-        float d = distance(uv, starPos);
-        float star = smoothstep(starSize, starSize * 0.5, d);
-        color += vec3(1.0) * star;
-    }
-
-    // Twinkling effect
-    float twinkle = 0.5 + 0.5 * sin(time * 5.0 + uv.x * 10.0 + uv.y * 10.0);
-    color += vec3(0.8, 0.9, 1.0) * twinkle * 0.02;
-
-    // Output the final color
-    FragColor = vec4(color, 1.0);
-}
-

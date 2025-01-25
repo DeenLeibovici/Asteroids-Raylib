@@ -10,6 +10,7 @@ Particle* particles[numParticles];
 unsigned int gameFrame = 0;
 int nextParticleIndex = 0;
 
+Particle shoot;
 #if defined(PLATFORM_DESKTOP)
     #define GLSL_VERSION            330
 #else   // PLATFORM_ANDROID, PLATFORM_WEB
@@ -17,6 +18,8 @@ int nextParticleIndex = 0;
 #endif
 
 Shader shader;
+
+    Texture2D sprite;
 void gamePlay(void){
     if (init){
         shader = LoadShader(0, TextFormat("src/bg.fs", GLSL_VERSION));
@@ -30,6 +33,8 @@ void gamePlay(void){
         rotation = 0.0;
         speed = 0.0;
         init = false;
+
+        sprite = LoadTexture("src/spaceship.png");
         for (int i = 0; i < numParticles; i++) {
             particles[i] = (Particle*)malloc(sizeof(Particle));
             //memset(particles[i],0,sizeof(Particle));
@@ -39,10 +44,20 @@ void gamePlay(void){
             particles[i]->position.y = 10;
             particles[i]->alive = false;
         }
+        shoot.position.x = 0;
+        shoot.position.y = 0;
+        shoot.velocity.x = 0;
+        shoot.velocity.y = 0;
+        shoot.lifetime = 0; 
+        shoot.alive = false;
     }
     else{
-        float time = (float)gameFrame*0.001;
-        SetShaderValue(shader, GetShaderLocation(shader, "time"), &time, SHADER_UNIFORM_FLOAT);
+        float time = (float)gameFrame*0.01;
+        SetShaderValue(shader, GetShaderLocation(shader, "iTime"), &time, SHADER_UNIFORM_FLOAT);
+        float x = (float)spaceShip->x*0.02;
+        SetShaderValue(shader, GetShaderLocation(shader, "iMousex"), &x, SHADER_UNIFORM_FLOAT);
+        float y = (float)spaceShip->y*0.02;
+        SetShaderValue(shader, GetShaderLocation(shader, "iMousey"), &y, SHADER_UNIFORM_FLOAT);
         BeginDrawing();
         ClearBackground(BLACK);
 
@@ -50,8 +65,14 @@ void gamePlay(void){
         DrawRectangle(0, 0, 1280, 800, BLACK); // Full-screen shader effect
         EndShaderMode();
 
-        DrawPolyLinesEx(*spaceShip, 3, 40.0, rotation, 5.0, WHITE);
+        //DrawPolyLinesEx(*spaceShip, 3, 40.0, rotation, 5.0, WHITE);
+        //DrawTextureEx(sprite, *spaceShip,rotation, 0.25, WHITE);  // Draw a Texture2D with extended parameters
 
+
+        if (shoot.alive){
+            Vector2 end = {shoot.position.x +shoot.velocity.x, shoot.position.y + shoot.velocity.y};
+            DrawLineEx(shoot.position, end, 5.0, WHITE);   
+        }
         for (int i = 0; i < numParticles; i++) {
             if (particles[i]->alive)
             {
@@ -59,6 +80,11 @@ void gamePlay(void){
                 DrawCircleV(particles[i]->position,5.0, color);
             }
         }
+        Rectangle source = { 0.0f, 0.0f, sprite.width, sprite.height }; // Full texture
+        Rectangle destination = { spaceShip->x, spaceShip->y, 0.25f*sprite.width, 0.25f*sprite.height }; // Destination rectangle
+        Vector2 origin = { 0.25f*(sprite.width / 2.0f), 0.25f*(sprite.height / 2.0f)}; // Center of the sprite
+        DrawTexturePro(sprite, source, destination,origin, rotation+90.0f, WHITE); // Draw a part of a texture defined by a rectangle with 'pro' parameters
+
         //printf("%d,%d,%d\n",particles[0]->color.r,particles[0]->color.g,particles[0]->color.b);
         EndDrawing();
         update();
@@ -85,11 +111,6 @@ void update(void){
     spaceShip->x += speed*((180/PI)*cosf((PI/180.0)*rotation));
     spaceShip->y += speed*((180/PI)*sinf((PI/180.0)*rotation));
 
-    //for (int i = 0; i < 100; i++){
-    //    particles[i]->position.x += particles[i]->velocity*((180/PI)*cosf((PI/180.0)*rotation));
-    //    particles[i]->position.y += particles[i]->velocity*((180/PI)*sinf((PI/180.0)*rotation));
-    //}
-
     if (spaceShip->x > 1280)
         spaceShip->x = 0;
     else if (spaceShip->x < 0)
@@ -107,6 +128,26 @@ void update(void){
 
 void particleHandler(void)
 {
+    
+    if (IsKeyDown(KEY_SPACE) && shoot.lifetime <= 0){
+        const float fast = 40.0;
+        float angle_rad = (PI / 180.0f) * rotation;
+        shoot.position = *spaceShip;
+        shoot.velocity.x = fast* (speed + 1)* cosf(angle_rad);
+        shoot.velocity.y = fast * (speed + 1) * sinf(angle_rad);
+        shoot.lifetime = 20;
+        shoot.alive = true;
+    }
+    if (shoot.alive){
+        shoot.position.x += shoot.velocity.x;
+        shoot.position.y += shoot.velocity.y;
+
+       shoot.lifetime -= 1;
+        if (shoot.lifetime <= 0) {
+            shoot.alive = false;
+        }
+    }
+
     //printf("Speed: %.2f\n", speed);
     if (IsKeyDown(KEY_UP) /*&& speed < 0.09*/ && (gameFrame%1==0))
     {
@@ -143,4 +184,13 @@ void particleHandler(void)
         }
     }
     
+}
+
+void cleanup(void){
+    free(spaceShip);
+	for(int i = 0; i < numParticles; i++){
+		free(particles[i]);
+	}
+	UnloadShader(shader);
+    UnloadTexture(sprite);
 }

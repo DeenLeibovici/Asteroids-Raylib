@@ -53,6 +53,9 @@ int main ()
 	}
 
 	// cleanup
+	if (currScene  == GAMEPLAY){
+		cleanup();
+	}
 	free(currScene);
 	// destroy the window and cleanup the OpenGL context
 	CloseWindow();
