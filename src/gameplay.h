@@ -13,11 +13,22 @@ typedef struct Particle {
     bool alive;
 } Particle;
 
-// Vector2* spaceShip;
-// Particle* particles[numParticles];
-// Shader shader;
+typedef struct Asteroid {
+    Vector2 position;
+    Vector2 velocity;
+    float size;
+    float rotation;
+    float rotationSpeed;
+    int asteroidVariant;
+    int currentFrame;
+    int frameSpeed;
+    int frameCounter;
+    int maxFrames;
+    bool alive;
+} Asteroid;
 
 void gamePlay(void);
 void update(void);
 void particleHandler(void);
+void asteroidHandler(void);
 void cleanup(void);

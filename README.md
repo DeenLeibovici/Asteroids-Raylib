@@ -1,3 +1,7 @@
+# Asteroids clone made with raylib and the quickstart setup
+
+## To compile to web follow this [video](https://www.youtube.com/watch?v=j6akryezlzc)
+
 # Raylib-Quickstart
 A simple cross platform template for setting up a project with the bleeding edge raylib code.
 Works with C or C++.
