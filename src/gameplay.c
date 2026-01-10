@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <time.h>
 #define numParticles 1000
-#define maxAsteroids 10
+#define maxAsteroids 100
 bool init = true;
 Vector2* spaceShip;
 float rotation;
@@ -25,6 +25,9 @@ Texture2D sprite;
 Texture2D explosionSpriteSheet;
 Texture2D asteroidSpriteSheet;
 
+Sound shootSound;
+Sound explosionSound;
+Sound thrusterSound;;
 void gamePlay(void){
     if (init){
         //Load Shader
@@ -69,16 +72,22 @@ void gamePlay(void){
                     asteroids[i]->position.y = (float)(rand() % 800);
                     asteroids[i]->velocity.x = (float)(rand() % 10 - 5);
                     asteroids[i]->velocity.y = (float)(rand() % 10 - 5);
-                    asteroids[i]->size = (float)(rand() % 30 + 100);
-                    asteroids[i]->rotation = 0.0f;//(float)(rand() % 360);
+                    asteroids[i]->size = (float)(rand() % 30 + 50);
+                    asteroids[i]->rotation = (float)(rand() % 360);
                     asteroids[i]->rotationSpeed = (float)(rand() % 5 - 2.5);
                     asteroids[i]->alive = true;
-                    asteroids[i]->asteroidVariant = 0;//rand() % 41;
-                    asteroids[i]->currentFrame = 1;
+                    asteroids[i]->asteroidVariant = rand() % 41;
+                    asteroids[i]->explosionVariant = rand() % 4;
+                    asteroids[i]->currentFrame = 0;
                     asteroids[i]->frameSpeed = 5;
                     asteroids[i]->frameCounter = 0;
-                    asteroids[i]->maxFrames = 21;
+                    asteroids[i]->maxFrames = 4;
         }
+        //Initialize Audio
+        InitAudioDevice();
+        shootSound =LoadSoundFromWave(LoadWave("src/assets/laser.wav"));
+        explosionSound =LoadSoundFromWave(LoadWave("src/assets/explosion.wav"));
+        thrusterSound =LoadSoundFromWave(LoadWave("src/assets/thruster.wav"));
     }
     else{
         //Update Shader Values
@@ -118,14 +127,30 @@ void gamePlay(void){
         //Draw Asteroids
         for (int i = 0; i < maxAsteroids; i++) {
             if (asteroids[i]->alive){
-                if (asteroids[i]->frameCounter++ >= asteroids[i]->frameSpeed){
-                    asteroids[i]->currentFrame++;
-                    if (asteroids[i]->currentFrame >= asteroids[i]->maxFrames){
-                        asteroids[i]->currentFrame = 0;
-                    }
-                    asteroids[i]->frameCounter = 0;
-                }
-    
+
+                // //Draw Explosion
+                if (asteroids[i]->currentFrame > 0){
+                //printf("Current Frame: %d, Explosion Variant: %d\n ", asteroids[i]->currentFrame, asteroids[i]->explosionVariant);
+                    if (asteroids[i]->frameCounter++ >= asteroids[i]->frameSpeed){
+                        if (asteroids[i]->currentFrame >= asteroids[i]->maxFrames){
+                            asteroids[i]->currentFrame = 0;
+                        }
+                        else{
+                            asteroids[i]->currentFrame++;
+                        }
+                        asteroids[i]->frameCounter = 0;
+                        asteroids[i]->alive = false;
+                    }  
+                Rectangle source = { (float)(asteroids[i]->explosionVariant) * (explosionSpriteSheet.width / 5.0f),
+                                        ((float)(asteroids[i]->currentFrame-1.0)) * (explosionSpriteSheet.height / 4.0f),
+                                        explosionSpriteSheet.width / 5.0f,
+                                        (explosionSpriteSheet.height / 4.0f)}; // Full texture
+                Rectangle destination = { asteroids[i]->position.x, asteroids[i]->position.y,
+                                            asteroids[i]->size, asteroids[i]->size }; // Destination rectangle
+                Vector2 origin = { asteroids[i]->size / 2.0f, asteroids[i]->size / 2.0f }; // Center of the sprite
+                DrawTexturePro(explosionSpriteSheet, source, destination, origin, asteroids[i]->rotation, WHITE); // Draw a part of a texture defined by a rectangle with 'pro' parameters
+                continue;
+            }
                 //Draw Asteroid
                 Rectangle source = { (float)(asteroids[i]->asteroidVariant % 7) * (asteroidSpriteSheet.width / 7.0f),
                                      (float)(asteroids[i]->asteroidVariant / 7) * (asteroidSpriteSheet.height / 7.0f),
@@ -136,18 +161,7 @@ void gamePlay(void){
                 Vector2 origin = { asteroids[i]->size / 2.0f, asteroids[i]->size / 2.0f }; // Center of the sprite
                 DrawTexturePro(asteroidSpriteSheet, source, destination, origin, asteroids[i]->rotation, WHITE); // Draw a part of a texture defined by a rectangle with 'pro' parameters
             }
-            //Draw Explosion
-            if (asteroids[i]->currentFrame > 0){
-                Rectangle source = { (float)(asteroids[i]->currentFrame % 5) * (explosionSpriteSheet.width / 5.0f),
-                                        (float)(asteroids[i]->currentFrame / 5) * (explosionSpriteSheet.height / 5.0f),
-                                        explosionSpriteSheet.width / 5.0f,
-                                        explosionSpriteSheet.height / 5.0f }; // Full texture
-                Rectangle destination = { asteroids[i]->position.x, asteroids[i]->position.y,
-                                            asteroids[i]->size, asteroids[i]->size }; // Destination rectangle
-                Vector2 origin = { asteroids[i]->size / 2.0f, asteroids[i]->size / 2.0f }; // Center of the sprite
-                DrawTexturePro(explosionSpriteSheet, source, destination, origin, asteroids[i]->rotation, WHITE); // Draw a part of a texture defined by a rectangle with 'pro' parameters
-                continue;
-            }
+    
         }
         //printf("%d,%d,%d\n",particles[0]->color.r,particles[0]->color.g,particles[0]->color.b);
 
@@ -175,6 +189,14 @@ void update(void){
     //Update Speed
     if (IsKeyDown(KEY_UP) && speed < 0.15){
         speed += 0.05;
+        
+    }
+    //Thruster Sound
+    if (IsKeyDown(KEY_UP) && !IsSoundPlaying(thrusterSound)){
+        PlaySound(thrusterSound);
+    }
+    else if (!IsKeyDown(KEY_UP)){
+        StopSound(thrusterSound);
     }
 
     spaceShip->x += speed*((180/PI)*cosf((PI/180.0)*rotation));
@@ -214,7 +236,22 @@ void asteroidHandler(void){
                     asteroids[i]->position.y = 0;
                 else if (asteroids[i]->position.y < 0)
                     asteroids[i]->position.y = 800;
+                //Check Collision with Shoot and SpaceShip
+                if (CheckCollisionCircles(asteroids[i]->position, asteroids[i]->size/2.0,
+                                             shoot.position, 5.0) && shoot.alive){
+                    PlaySound(explosionSound);
+                    asteroids[i]->currentFrame = 1;
+                    shoot.alive = false;
+                    shoot.lifetime = 0;
+                }
+                if (CheckCollisionCircles(asteroids[i]->position, asteroids[i]->size/2.0,
+                                             *spaceShip, 20.0f)){
+                    asteroids[i]->currentFrame = 1;
+                    PlaySound(explosionSound);
+           
+                }
         }
+
     }
 }
 void particleHandler(void)
@@ -228,6 +265,7 @@ void particleHandler(void)
         shoot.velocity.y = fast * (speed + 1) * sinf(angle_rad);
         shoot.lifetime = 20;
         shoot.alive = true;
+        PlaySound(shootSound);
     }
     if (shoot.alive){
         shoot.position.x += shoot.velocity.x;
@@ -282,6 +320,12 @@ void cleanup(void){
 	for(int i = 0; i < numParticles; i++){
 		free(particles[i]);
 	}
+    for (int i = 0; i < maxAsteroids; i++) {
+        free(asteroids[i]);
+    }
 	UnloadShader(shader);
     UnloadTexture(sprite);
+    UnloadTexture(explosionSpriteSheet);
+    UnloadTexture(asteroidSpriteSheet);
+    CloseAudioDevice();
 }

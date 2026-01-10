@@ -20,6 +20,7 @@ typedef struct Asteroid {
     float rotation;
     float rotationSpeed;
     int asteroidVariant;
+    int explosionVariant;
     int currentFrame;
     int frameSpeed;
     int frameCounter;
