@@ -1,8 +1,15 @@
 # Asteroids clone made with raylib and the quickstart setup
 
 ## To compile to web follow this [video](https://www.youtube.com/watch?v=j6akryezlzc)
+It is also recommended to look at raylibs official documentation fot web compilation
+Command I used:
+```bash
+emcc -o asteroid_c.html src/main.c src/titlescreen.c src/gameplay.c src/gameover.c -Wall -std=c99 -D_DEFAULT_SOURCE -Wno-missing-braces -Wunused-result -Os -I. -I C:/libs/raylib/raylib/src -I C:/libs/raylib/raylib/src/external -L. -L C:/libs/raylib/raylib/src -s USE_GLFW=3 -s ASYNCIFY -s TOTAL_MEMORY=67108864 -s FORCE_FILESYSTEM=1 --shell-file C:/libs/raylib/raylib/src/shell.html C:/libs/raylib/raylib/src/web/libraylib.a -DPLATFORM_WEB -s 'EXPORTED_FUNCTIONS=["_free","_malloc","_main"]'-s EXPORTED_RUNTIME_METHODS=ccall --preload-file assets -s ASYNCIFY
+```
 
-# Raylib-Quickstart
+To compile for desktop:
+
+# Raylib-Quickstart Instructions Beyond this point
 A simple cross platform template for setting up a project with the bleeding edge raylib code.
 Works with C or C++.
 

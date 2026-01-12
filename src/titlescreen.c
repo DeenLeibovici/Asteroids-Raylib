@@ -1,6 +1,6 @@
 #include "titlescreen.h"
 
-void titleScreen(Scene* scene){
+void titleScreen(int* scene){
     const char* titleText = "Asteroids";
     const char* playText = "Press Enter Key";
     const char* instructionsText = "Use arrow keys to move and spacebar to shoot";
@@ -8,13 +8,13 @@ void titleScreen(Scene* scene){
     // Setup the back buffer for drawing (clear color and depth buffers)
     ClearBackground(BLACK);
     // draw some text using the default font
-    int titleOffset = MeasureText(titleText,100);
-    int textOffset = MeasureText(playText, 40);
-    int instructionsOffset = MeasureText(instructionsText, 20);
+    int titleOffset = MeasureText(titleText,200);
+    int textOffset = MeasureText(playText, 50);
+    int instructionsOffset = MeasureText(instructionsText, 50);
 
-    DrawText("Asteroids", (1280-titleOffset)/2,300,100,WHITE);
-    DrawText("Press Enter Key",(1280-textOffset)/2,450,40,WHITE);
-    DrawText(instructionsText,(1280-instructionsOffset)/2,700,20,WHITE);
+    DrawText("Asteroids", (GetScreenWidth()-titleOffset)/2,GetScreenHeight()/2-200,200,WHITE);
+    DrawText("Press Enter Key",(GetScreenWidth()-textOffset)/2,GetScreenHeight()/2+100,50,WHITE);
+    DrawText(instructionsText,(GetScreenWidth()-instructionsOffset)/2,GetScreenHeight()-200,50,WHITE);
 
     
     // end the frame and get ready for the next one  (display frame, poll input, etc...)

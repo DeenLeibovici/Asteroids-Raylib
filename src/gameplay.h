@@ -1,5 +1,6 @@
 #pragma once
 #include "raylib.h"
+#include "titlescreen.h"
 #include <stdlib.h>
 #include <math.h>
 // #define numParticles 1000
@@ -26,10 +27,12 @@ typedef struct Asteroid {
     int frameCounter;
     int maxFrames;
     bool alive;
+    bool fragment;
 } Asteroid;
 
-void gamePlay(void);
+void initGamePlay(void);
+void gamePlay(int* currScene, int* score);
 void update(void);
 void particleHandler(void);
-void asteroidHandler(void);
+void asteroidHandler(int* currScene, int* score);
 void cleanup(void);

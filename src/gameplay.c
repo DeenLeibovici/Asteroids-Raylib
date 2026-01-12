@@ -3,7 +3,7 @@
 #include <time.h>
 #define numParticles 1000
 #define maxAsteroids 100
-bool init = true;
+
 Vector2* spaceShip;
 float rotation;
 float speed;
@@ -28,13 +28,15 @@ Texture2D asteroidSpriteSheet;
 Sound shootSound;
 Sound explosionSound;
 Sound thrusterSound;;
-void gamePlay(void){
-    if (init){
-        //Load Shader
-        shader = LoadShader(0, TextFormat("src/bg.fs", GLSL_VERSION));
-        SetShaderValue(shader, GetShaderLocation(shader, "resolution"),
-                   (float[2]){ 1280, 800}, SHADER_UNIFORM_VEC2);
 
+void initGamePlay(void){
+    //Initialization moved to gamePlay function
+        //Load Shader
+        #if defined(PLATFORM_DESKTOP)
+        shader = LoadShader(0, TextFormat("./assets/bg.fs", GLSL_VERSION));
+        SetShaderValue(shader, GetShaderLocation(shader, "resolution"),
+                   (float[2]){ GetScreenWidth(), GetScreenHeight()}, SHADER_UNIFORM_VEC2);
+        #endif
         //Initialize Space Ship
         srand((unsigned int)time(NULL));
         spaceShip = (Vector2*)malloc(sizeof(Vector2));
@@ -42,9 +44,8 @@ void gamePlay(void){
         spaceShip->y = 400.0;
         rotation = 0.0;
         speed = 0.0;
-        init = false;
 
-        sprite = LoadTexture("src/assets/spaceship.png");
+        sprite = LoadTexture("./assets/spaceship.png");
 
         //Initialize Particles
         for (int i = 0; i < numParticles; i++) {
@@ -64,46 +65,58 @@ void gamePlay(void){
         shoot.alive = false;
 
         //Init Asteroids Here
-        explosionSpriteSheet = LoadTexture("src/assets/explosion.png");//Animation Sprite Sheet
-        asteroidSpriteSheet = LoadTexture("src/assets/asteroids.png");//Asteroid Variants Sprite Sheet
+        explosionSpriteSheet = LoadTexture("./assets/explosion.png");//Animation Sprite Sheet
+        asteroidSpriteSheet = LoadTexture("./assets/asteroids.png");//Asteroid Variants Sprite Sheet
         for (int i = 0; i < maxAsteroids; i++) {
                     asteroids[i] = (Asteroid*)malloc(sizeof(Asteroid));
-                    asteroids[i]->position.x = (float)(rand() % 1280);
-                    asteroids[i]->position.y = (float)(rand() % 800);
+                    asteroids[i]->position.x = (float)(rand() % GetScreenWidth());
+                    asteroids[i]->position.y = (float)(rand() % GetScreenHeight());
                     asteroids[i]->velocity.x = (float)(rand() % 10 - 5);
                     asteroids[i]->velocity.y = (float)(rand() % 10 - 5);
-                    asteroids[i]->size = (float)(rand() % 30 + 50);
                     asteroids[i]->rotation = (float)(rand() % 360);
                     asteroids[i]->rotationSpeed = (float)(rand() % 5 - 2.5);
-                    asteroids[i]->alive = true;
+                    if (i < (maxAsteroids / 4)){
+                        asteroids[i]->size = (float)(rand() % 30 + 100);
+                        asteroids[i]->alive = true;
+                    }
+                    else{
+                        asteroids[i]->alive = false;
+                        asteroids[i]->size = (float)(rand() % 30 + 50);
+                    }
                     asteroids[i]->asteroidVariant = rand() % 41;
                     asteroids[i]->explosionVariant = rand() % 4;
                     asteroids[i]->currentFrame = 0;
                     asteroids[i]->frameSpeed = 5;
                     asteroids[i]->frameCounter = 0;
                     asteroids[i]->maxFrames = 4;
+                    asteroids[i]->fragment = false;
         }
         //Initialize Audio
         InitAudioDevice();
-        shootSound =LoadSoundFromWave(LoadWave("src/assets/laser.wav"));
-        explosionSound =LoadSoundFromWave(LoadWave("src/assets/explosion.wav"));
-        thrusterSound =LoadSoundFromWave(LoadWave("src/assets/thruster.wav"));
-    }
-    else{
+        shootSound =LoadSoundFromWave(LoadWave("./assets/laser.wav"));
+        explosionSound =LoadSoundFromWave(LoadWave("./assets/explosion.wav"));
+        thrusterSound =LoadSoundFromWave(LoadWave("./assets/thruster.wav"));
+}
+float x, y;
+void gamePlay(int* currScene, int* score){
         //Update Shader Values
+        #if defined(PLATFORM_DESKTOP)
         float time = (float)gameFrame*0.01;
         SetShaderValue(shader, GetShaderLocation(shader, "iTime"), &time, SHADER_UNIFORM_FLOAT);
-        float x = (float)spaceShip->x*0.02;
+        x = (float)spaceShip->x*0.002;
         SetShaderValue(shader, GetShaderLocation(shader, "iMousex"), &x, SHADER_UNIFORM_FLOAT);
-        float y = (float)spaceShip->y*0.02;
+        y = (float)spaceShip->y*0.002;
         SetShaderValue(shader, GetShaderLocation(shader, "iMousey"), &y, SHADER_UNIFORM_FLOAT);
+        #endif
         //-------------------------------------------------------------------------------------------
         BeginDrawing();
         ClearBackground(BLACK);
         //Draw Shader Background
+        #if defined(PLATFORM_DESKTOP)
         BeginShaderMode(shader);
-        DrawRectangle(0, 0, 1280, 800, BLACK); // Full-screen shader effect
-        EndShaderMode();
+        DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), BLACK); // Full-screen shader effect
+        EndShaderMode() ;
+        #endif
 
         //Draw Shoot
         if (shoot.alive){
@@ -140,6 +153,7 @@ void gamePlay(void){
                         }
                         asteroids[i]->frameCounter = 0;
                         asteroids[i]->alive = false;
+                        asteroids[i]->fragment = false;
                     }  
                 Rectangle source = { (float)(asteroids[i]->explosionVariant) * (explosionSpriteSheet.width / 5.0f),
                                         ((float)(asteroids[i]->currentFrame-1.0)) * (explosionSpriteSheet.height / 4.0f),
@@ -164,15 +178,45 @@ void gamePlay(void){
     
         }
         //printf("%d,%d,%d\n",particles[0]->color.r,particles[0]->color.g,particles[0]->color.b);
-
+        //Draw Score
+        DrawText(TextFormat("Score: %d", *score), 10, 10, 30, WHITE);
         EndDrawing();
         //-------------------------------------------------------------------------------------------
 
         update();
         particleHandler();
-        asteroidHandler();
+        asteroidHandler(currScene, score);
         gameFrame++;
-    }
+
+        //Spawn an asteroid every 300 frames
+        if (gameFrame % 300 == 0){
+            int amount = (int)log2(gameFrame/300 + 1);
+            int count = 0;
+            for (int i = 0; i < maxAsteroids; i++) {
+                if (!asteroids[i]->alive){
+                    asteroids[i]->position.x = (float)(rand() % GetScreenWidth());
+                    asteroids[i]->position.y = (float)(rand() % GetScreenHeight());
+                    asteroids[i]->velocity.x = (float)(rand() % 10 - 5);
+                    asteroids[i]->velocity.y = (float)(rand() % 10 - 5);
+                    asteroids[i]->rotation = (float)(rand() % 360);
+                    asteroids[i]->rotationSpeed = (float)(rand() % 5 - 2.5);
+                    asteroids[i]->size = (float)(rand() % 50 + 120);
+                    asteroids[i]->alive = true;
+                    asteroids[i]->asteroidVariant = rand() % 41;
+                    asteroids[i]->explosionVariant = rand() % 4;
+                    asteroids[i]->currentFrame = 0;
+                    asteroids[i]->frameSpeed = 5;
+                    asteroids[i]->frameCounter = 0;
+                    asteroids[i]->maxFrames = 4;
+                    asteroids[i]->fragment = false;
+                    if (count == amount)
+                        break;
+                    else
+                        count++;
+                }
+            }
+        }
+    
 }
 
 void update(void){
@@ -180,15 +224,15 @@ void update(void){
     if (IsKeyDown(KEY_RIGHT) && IsKeyDown(KEY_LEFT)){
     }
     else if (IsKeyDown(KEY_RIGHT)){
-        rotation += 2.0;
+        rotation += 3.0;
     }
     else if (IsKeyDown(KEY_LEFT)){
-        rotation -= 2.0;
+        rotation -= 3.0;
     }
 
     //Update Speed
     if (IsKeyDown(KEY_UP) && speed < 0.15){
-        speed += 0.05;
+        speed += 0.004;
         
     }
     //Thruster Sound
@@ -202,21 +246,21 @@ void update(void){
     spaceShip->x += speed*((180/PI)*cosf((PI/180.0)*rotation));
     spaceShip->y += speed*((180/PI)*sinf((PI/180.0)*rotation));
 
-    if (spaceShip->x > 1280)
+    if (spaceShip->x > GetScreenWidth())
         spaceShip->x = 0;
     else if (spaceShip->x < 0)
-        spaceShip->x = 1280;
+        spaceShip->x = GetScreenWidth();
 
-    if (spaceShip->y > 800)
+    if (spaceShip->y > GetScreenHeight())
         spaceShip->y = 0;
     else if (spaceShip->y < 0)
-        spaceShip->y = 800;
+        spaceShip->y = GetScreenHeight();
     
 
     if (speed > 0)
         speed -= 0.001;
 }
-void asteroidHandler(void){
+void asteroidHandler(int* currScene, int* score){
     //Manage Asteroids logic
     for (int i = 0; i < maxAsteroids; i++) {
 
@@ -227,29 +271,62 @@ void asteroidHandler(void){
                 asteroids[i]->position.y += asteroids[i]->velocity.y * 0.1;
                 asteroids[i]->rotation += asteroids[i]->rotationSpeed * 0.1;
 
-                if (asteroids[i]->position.x > 1280)
+                if (asteroids[i]->position.x > GetScreenWidth())
                     asteroids[i]->position.x = 0;
                 else if (asteroids[i]->position.x < 0)
-                    asteroids[i]->position.x = 1280;
+                    asteroids[i]->position.x = GetScreenWidth();
 
-                if (asteroids[i]->position.y > 800)
+                if (asteroids[i]->position.y > GetScreenHeight())
                     asteroids[i]->position.y = 0;
                 else if (asteroids[i]->position.y < 0)
-                    asteroids[i]->position.y = 800;
+                    asteroids[i]->position.y = GetScreenHeight();
                 //Check Collision with Shoot and SpaceShip
                 if (CheckCollisionCircles(asteroids[i]->position, asteroids[i]->size/2.0,
                                              shoot.position, 5.0) && shoot.alive){
                     PlaySound(explosionSound);
+                    ++*score;
                     asteroids[i]->currentFrame = 1;
                     shoot.alive = false;
-                    shoot.lifetime = 0;
-                }
-                if (CheckCollisionCircles(asteroids[i]->position, asteroids[i]->size/2.0,
-                                             *spaceShip, 20.0f)){
-                    asteroids[i]->currentFrame = 1;
-                    PlaySound(explosionSound);
-           
-                }
+                    // shoot.lifetime = 0;
+                    //Spawn New Asteroid
+                    if (asteroids[i]->size > 60.0 && !asteroids[i]->fragment){
+                        int count = 1;
+                        // int amount = rand() % 4;
+                        for (int j = 0; j < maxAsteroids; j++) {
+                            if (!asteroids[j]->alive){
+                                asteroids[j]->position.x = asteroids[i]->position.x;
+                                asteroids[j]->position.y = asteroids[i]->position.y;
+                                asteroids[j]->velocity.x = (float)(rand() % 10 - 5);
+                                asteroids[j]->velocity.y = (float)(rand() % 10 - 5);
+                                asteroids[j]->rotation = (float)(rand() % 360);
+                                asteroids[j]->rotationSpeed = (float)(rand() % 5 - 2.5);
+                                asteroids[j]->size = (float)(rand() % 30 + 50);
+                                asteroids[j]->alive = true;
+                                asteroids[j]->asteroidVariant = rand() % 41;
+                                asteroids[j]->explosionVariant = rand() % 4;
+                                asteroids[j]->currentFrame = 0;
+                                asteroids[j]->frameSpeed = 5;
+                                asteroids[j]->frameCounter = 0;
+                                asteroids[j]->maxFrames = 4;
+                                asteroids[j]->fragment = true;
+                                if (count == 4)
+                                    break;
+                                else
+                                    count++;
+                                }
+                            }
+                        }   
+                    }   
+                    if (CheckCollisionCircles(asteroids[i]->position, asteroids[i]->size/2.0,
+                                                *spaceShip, 20.0f)){
+                        asteroids[i]->currentFrame = 1;
+                        PlaySound(explosionSound);
+                        if (IsSoundPlaying(thrusterSound)){
+                            StopSound(thrusterSound);
+                        }
+                        *currScene = ENDING;
+            
+                    }
         }
 
     }
@@ -267,11 +344,14 @@ void particleHandler(void)
         shoot.alive = true;
         PlaySound(shootSound);
     }
+
+    if (shoot.lifetime > 0){
+        shoot.lifetime -= 1;
+    }
     if (shoot.alive){
         shoot.position.x += shoot.velocity.x;
         shoot.position.y += shoot.velocity.y;
 
-       shoot.lifetime -= 1;
         if (shoot.lifetime <= 0) {
             shoot.alive = false;
         }
