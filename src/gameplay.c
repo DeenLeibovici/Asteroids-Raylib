@@ -32,7 +32,11 @@ Sound thrusterSound;;
 void initGamePlay(void){
     //Initialization moved to gamePlay function
         //Load Shader
-        #if defined(PLATFORM_DESKTOP)
+        #if defined(PLATFORM_WEB)
+        shader = LoadShader(0, TextFormat("./assets/bgWeb.fs", GLSL_VERSION));
+        SetShaderValue(shader, GetShaderLocation(shader, "resolution"),
+                   (float[2]){ GetScreenWidth(), GetScreenHeight()}, SHADER_UNIFORM_VEC2);
+        #else
         shader = LoadShader(0, TextFormat("./assets/bg.fs", GLSL_VERSION));
         SetShaderValue(shader, GetShaderLocation(shader, "resolution"),
                    (float[2]){ GetScreenWidth(), GetScreenHeight()}, SHADER_UNIFORM_VEC2);
@@ -100,23 +104,19 @@ void initGamePlay(void){
 float x, y;
 void gamePlay(int* currScene, int* score){
         //Update Shader Values
-        #if defined(PLATFORM_DESKTOP)
         float time = (float)gameFrame*0.01;
         SetShaderValue(shader, GetShaderLocation(shader, "iTime"), &time, SHADER_UNIFORM_FLOAT);
         x = (float)spaceShip->x*0.002;
         SetShaderValue(shader, GetShaderLocation(shader, "iMousex"), &x, SHADER_UNIFORM_FLOAT);
         y = (float)spaceShip->y*0.002;
         SetShaderValue(shader, GetShaderLocation(shader, "iMousey"), &y, SHADER_UNIFORM_FLOAT);
-        #endif
         //-------------------------------------------------------------------------------------------
         BeginDrawing();
         ClearBackground(BLACK);
         //Draw Shader Background
-        #if defined(PLATFORM_DESKTOP)
         BeginShaderMode(shader);
         DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), BLACK); // Full-screen shader effect
         EndShaderMode() ;
-        #endif
 
         //Draw Shoot
         if (shoot.alive){
@@ -137,11 +137,21 @@ void gamePlay(int* currScene, int* score){
         Vector2 origin = { 0.25f*(sprite.width / 2.0f), 0.25f*(sprite.height / 2.0f)}; // Center of the sprite
         DrawTexturePro(sprite, source, destination,origin, rotation+90.0f, WHITE); // Draw a part of a texture defined by a rectangle with 'pro' parameters
 
-        //Draw Asteroids
+
         for (int i = 0; i < maxAsteroids; i++) {
             if (asteroids[i]->alive){
 
-                // //Draw Explosion
+                //Draw Asteroid
+                Rectangle source = { (float)(asteroids[i]->asteroidVariant % 7) * (asteroidSpriteSheet.width / 7.0f),
+                                     (float)(asteroids[i]->asteroidVariant / 7) * (asteroidSpriteSheet.height / 7.0f),
+                                     asteroidSpriteSheet.width / 7.0f,
+                                     asteroidSpriteSheet.height / 7.0f }; // Full texture
+                Rectangle destination = { asteroids[i]->position.x, asteroids[i]->position.y,
+                                          asteroids[i]->size, asteroids[i]->size }; // Destination rectangle
+                Vector2 origin = { asteroids[i]->size / 2.0f, asteroids[i]->size / 2.0f }; // Center of the sprite
+                DrawTexturePro(asteroidSpriteSheet, source, destination, origin, asteroids[i]->rotation, WHITE); // Draw a part of a texture defined by a rectangle with 'pro' parameters
+
+                //Draw Explosion
                 if (asteroids[i]->currentFrame > 0){
                 //printf("Current Frame: %d, Explosion Variant: %d\n ", asteroids[i]->currentFrame, asteroids[i]->explosionVariant);
                     if (asteroids[i]->frameCounter++ >= asteroids[i]->frameSpeed){
@@ -165,15 +175,7 @@ void gamePlay(int* currScene, int* score){
                 DrawTexturePro(explosionSpriteSheet, source, destination, origin, asteroids[i]->rotation, WHITE); // Draw a part of a texture defined by a rectangle with 'pro' parameters
                 continue;
             }
-                //Draw Asteroid
-                Rectangle source = { (float)(asteroids[i]->asteroidVariant % 7) * (asteroidSpriteSheet.width / 7.0f),
-                                     (float)(asteroids[i]->asteroidVariant / 7) * (asteroidSpriteSheet.height / 7.0f),
-                                     asteroidSpriteSheet.width / 7.0f,
-                                     asteroidSpriteSheet.height / 7.0f }; // Full texture
-                Rectangle destination = { asteroids[i]->position.x, asteroids[i]->position.y,
-                                          asteroids[i]->size, asteroids[i]->size }; // Destination rectangle
-                Vector2 origin = { asteroids[i]->size / 2.0f, asteroids[i]->size / 2.0f }; // Center of the sprite
-                DrawTexturePro(asteroidSpriteSheet, source, destination, origin, asteroids[i]->rotation, WHITE); // Draw a part of a texture defined by a rectangle with 'pro' parameters
+                
             }
     
         }
@@ -196,8 +198,8 @@ void gamePlay(int* currScene, int* score){
                 if (!asteroids[i]->alive){
                     asteroids[i]->position.x = (float)(rand() % GetScreenWidth());
                     asteroids[i]->position.y = (float)(rand() % GetScreenHeight());
-                    asteroids[i]->velocity.x = (float)(rand() % 10 - 5);
-                    asteroids[i]->velocity.y = (float)(rand() % 10 - 5);
+                    asteroids[i]->velocity.x = (float)(rand() % 10 - 5 + amount);
+                    asteroids[i]->velocity.y = (float)(rand() % 10 - 5 + amount);
                     asteroids[i]->rotation = (float)(rand() % 360);
                     asteroids[i]->rotationSpeed = (float)(rand() % 5 - 2.5);
                     asteroids[i]->size = (float)(rand() % 50 + 120);
@@ -403,7 +405,7 @@ void cleanup(void){
     for (int i = 0; i < maxAsteroids; i++) {
         free(asteroids[i]);
     }
-	UnloadShader(shader);
+    UnloadShader(shader);
     UnloadTexture(sprite);
     UnloadTexture(explosionSpriteSheet);
     UnloadTexture(asteroidSpriteSheet);

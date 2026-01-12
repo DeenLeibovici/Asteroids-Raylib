@@ -3,11 +3,7 @@
 void gameOver(int* currScene, int* score){
     ClearBackground(BLACK);
     const char* gameOverText = "Game Over!";
-    #if defined(PLATFORM_WEB)
-    const char* restartText = "Refresh Page to Restart";
-    #else
     const char* restartText = "Press Enter to Restart";
-    #endif
     const char* scoreTextFormat = "Final Score: %d";
     int gameOverTextOffset = MeasureText(gameOverText, 200);
     int restartTextOffset = MeasureText(restartText, 50);
@@ -20,7 +16,7 @@ void gameOver(int* currScene, int* score){
     DrawText(restartText, GetScreenWidth() / 2 - restartTextOffset / 2, GetScreenHeight() - 100, 50, WHITE);
     EndDrawing();
 
-    if (IsKeyPressed(KEY_ENTER)){
+    if (IsKeyDown(KEY_ENTER)){
         cleanup();
         initGamePlay();
         *score = 0;

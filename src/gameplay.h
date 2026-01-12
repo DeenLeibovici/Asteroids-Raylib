@@ -3,7 +3,6 @@
 #include "titlescreen.h"
 #include <stdlib.h>
 #include <math.h>
-// #define numParticles 1000
 typedef struct Particle {
     Vector2 position;  // Current position
     // Vector2 velocity;  // Movement direction and speed
